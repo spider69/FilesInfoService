@@ -44,7 +44,7 @@ public class UserRoutesTest extends JUnitRouteTest {
                         "[{\"id\": 1, \"format\": 2, \"size\": 1024},{\"id\": 2, \"format\": 5, \"size\": 19}]")
         );
 
-        Thread.currentThread().sleep(350); // waiting for insertion
+        Thread.currentThread().sleep(500); // waiting for insertion
 
         appRoute.run(HttpRequest.GET("/get?md5=F"))
                 .assertStatusCode(StatusCodes.OK)
@@ -72,7 +72,7 @@ public class UserRoutesTest extends JUnitRouteTest {
                                     "[{\"id\": " + id + ", \"format\": 2, \"size\": 1024}]")
                     );
 
-                    Thread.currentThread().sleep(400); // waiting for insertion
+                    Thread.currentThread().sleep(500); // waiting for insertion
 
                     appRoute.run(HttpRequest.GET("/get?md5=" + id))
                             .assertStatusCode(StatusCodes.OK)
@@ -98,7 +98,7 @@ public class UserRoutesTest extends JUnitRouteTest {
                         "[{\"id\": 1, \"format\": 254, \"size\": 1024},{\"id\": 2, \"format\": 8, \"size\": 195}]")
         );
 
-        Thread.currentThread().sleep(400);
+        Thread.currentThread().sleep(500);
 
         appRoute.run(HttpRequest.GET("/get?md5=D"))
                 .assertStatusCode(StatusCodes.OK)
@@ -123,7 +123,7 @@ public class UserRoutesTest extends JUnitRouteTest {
                         "[{\"id\": 1, \"format\": 2, \"size\": 1024},{\"id\": 2, \"format\": 5, \"size\": 19}]")
         );
 
-        Thread.currentThread().sleep(400);
+        Thread.currentThread().sleep(500);
 
         appRoute.run(HttpRequest.GET("/get?zone=5&format=2,5&size=1-1024"))
                 .assertStatusCode(StatusCodes.OK)
