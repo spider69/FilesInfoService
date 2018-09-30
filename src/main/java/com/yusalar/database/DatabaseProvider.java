@@ -1,13 +1,16 @@
 package com.yusalar.database;
 
+import com.yusalar.attributes.validators.AttributeValidator;
+
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 // common interface for database providing
 public interface DatabaseProvider {
     // methods for getting from db
-    List<Long> getMd5ByAttrs(AttrsDescription attrsDescription);
+    List<Long> getMd5ByAttrs(Map<String, AttributeValidator> attrs);
     Optional<Attr> getAttrsByMd5(long md5);
 
     // methods for insertion to db
@@ -86,49 +89,6 @@ public interface DatabaseProvider {
 
         public long getSize() {
             return size;
-        }
-    }
-
-    // for getting md5 by (zone, format, size) list
-    class AttrsDescription {
-        private final long zone;
-        private final List<Integer> formats;
-        private final long sizeIntervalBegin;
-        private final long sizeIntervalEnd;
-
-        public AttrsDescription(long zone, List<Integer> formats, long sizeIntervalBegin, long sizeIntervalEnd) {
-            this.zone = zone;
-            this.formats = formats;
-            this.sizeIntervalBegin = sizeIntervalBegin;
-            this.sizeIntervalEnd = sizeIntervalEnd;
-        }
-
-        public long getZone() {
-            return zone;
-        }
-
-        public List<Integer> getFormats() {
-            return formats;
-        }
-
-        public long getSizeIntervalBegin() {
-            return sizeIntervalBegin;
-        }
-
-        public long getSizeIntervalEnd() {
-            return sizeIntervalEnd;
-        }
-
-        @Override
-        public boolean equals(Object that) {
-            if (this == that) return true;
-            if (!(that instanceof AttrsDescription)) return false;
-
-            AttrsDescription attrsDescription = (AttrsDescription)that;
-            return this.zone == attrsDescription.zone &&
-                    this.formats.equals(attrsDescription.formats) &&
-                    this.sizeIntervalBegin == attrsDescription.sizeIntervalBegin &&
-                    this.sizeIntervalEnd == attrsDescription.sizeIntervalEnd;
         }
     }
 }

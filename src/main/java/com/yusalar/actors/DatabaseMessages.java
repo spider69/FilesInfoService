@@ -1,8 +1,10 @@
 package com.yusalar.actors;
 
+import com.yusalar.attributes.validators.AttributeValidator;
 import com.yusalar.database.DatabaseProvider;
 
 import java.util.List;
+import java.util.Map;
 
 public interface DatabaseMessages {
     class InsertFirstGroup {
@@ -30,13 +32,13 @@ public interface DatabaseMessages {
     }
 
     class GetMd5ByAttrs {
-        private final DatabaseProvider.AttrsDescription attrs;
+        private final Map<String, AttributeValidator> attrs;
 
-        public GetMd5ByAttrs(DatabaseProvider.AttrsDescription attrs) {
+        public GetMd5ByAttrs(Map<String, AttributeValidator> attrs) {
             this.attrs = attrs;
         }
 
-        public DatabaseProvider.AttrsDescription getAttrs() {
+        public Map<String, AttributeValidator> getAttrs() {
             return attrs;
         }
     }

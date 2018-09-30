@@ -11,6 +11,7 @@ import akka.http.javadsl.testkit.TestRoute;
 import akka.routing.RoundRobinPool;
 import com.yusalar.Server;
 import com.yusalar.actors.DatabaseAccessActor;
+import com.yusalar.attributes.AttributeValidatorsFactory;
 import com.yusalar.database.DatabaseProvider;
 import com.yusalar.database.MockedHBase;
 import org.junit.Before;
@@ -26,6 +27,9 @@ public class UserRoutesTest extends JUnitRouteTest {
     @Before
     public void init() {
         ActorSystem system = ActorSystem.create("testServer");
+        AttributeValidatorsFactory.getInstance().registerAttribute("zone", Long::parseLong);
+        AttributeValidatorsFactory.getInstance().registerAttribute("format", Integer::parseInt);
+        AttributeValidatorsFactory.getInstance().registerAttribute("size", Long::parseLong);
         database = new MockedHBase();
         ActorRef databaseBalancer = system.actorOf(new RoundRobinPool(5).props(Props.create(DatabaseAccessActor.class, database)));
         Server server = new Server(system, databaseBalancer);
@@ -44,7 +48,7 @@ public class UserRoutesTest extends JUnitRouteTest {
                         "[{\"id\": 1, \"format\": 2, \"size\": 1024},{\"id\": 2, \"format\": 5, \"size\": 19}]")
         );
 
-        Thread.currentThread().sleep(500); // waiting for insertion
+        Thread.currentThread().sleep(350); // waiting for insertion
 
         appRoute.run(HttpRequest.GET("/get?md5=F"))
                 .assertStatusCode(StatusCodes.OK)
@@ -72,7 +76,7 @@ public class UserRoutesTest extends JUnitRouteTest {
                                     "[{\"id\": " + id + ", \"format\": 2, \"size\": 1024}]")
                     );
 
-                    Thread.currentThread().sleep(500); // waiting for insertion
+                    Thread.currentThread().sleep(400); // waiting for insertion
 
                     appRoute.run(HttpRequest.GET("/get?md5=" + id))
                             .assertStatusCode(StatusCodes.OK)
@@ -98,7 +102,7 @@ public class UserRoutesTest extends JUnitRouteTest {
                         "[{\"id\": 1, \"format\": 254, \"size\": 1024},{\"id\": 2, \"format\": 8, \"size\": 195}]")
         );
 
-        Thread.currentThread().sleep(500);
+        Thread.currentThread().sleep(400);
 
         appRoute.run(HttpRequest.GET("/get?md5=D"))
                 .assertStatusCode(StatusCodes.OK)
@@ -123,11 +127,42 @@ public class UserRoutesTest extends JUnitRouteTest {
                         "[{\"id\": 1, \"format\": 2, \"size\": 1024},{\"id\": 2, \"format\": 5, \"size\": 19}]")
         );
 
-        Thread.currentThread().sleep(500);
+        Thread.currentThread().sleep(400);
 
         appRoute.run(HttpRequest.GET("/get?zone=5&format=2,5&size=1-1024"))
                 .assertStatusCode(StatusCodes.OK)
                 .assertEntity("[15,10]");
+    }
+
+    @Test
+    public void getAttrsListComplex() throws Exception {
+        appRoute.run(HttpRequest.POST("/insertFirst")
+                .withEntity(MediaTypes.APPLICATION_JSON.toContentType(),
+                        "[{\"id\": 1, \"md5\": 15, \"zone\": 5},{\"id\": 2, \"md5\": 10, \"zone\": 7}]")
+        );
+
+        appRoute.run(HttpRequest.POST("/insertSecond")
+                .withEntity(MediaTypes.APPLICATION_JSON.toContentType(),
+                        "[{\"id\": 1, \"format\": 2, \"size\": 1024},{\"id\": 2, \"format\": 5, \"size\": 19}]")
+        );
+
+        Thread.currentThread().sleep(400);
+
+        appRoute.run(HttpRequest.GET("/get?zone=5-7&format=2-5&size=1-1024"))
+                .assertStatusCode(StatusCodes.OK)
+                .assertEntity("[15,10]");
+
+        appRoute.run(HttpRequest.GET("/get?zone=5,7&format=2,5&size=19,1024"))
+                .assertStatusCode(StatusCodes.OK)
+                .assertEntity("[15,10]");
+
+        appRoute.run(HttpRequest.GET("/get?zone=5&format=2&size=1024"))
+                .assertStatusCode(StatusCodes.OK)
+                .assertEntity("[15]");
+
+        appRoute.run(HttpRequest.GET("/get?zone=5,8,15&format=2&size=1-1024"))
+                .assertStatusCode(StatusCodes.OK)
+                .assertEntity("[15]");
     }
 
     @Test

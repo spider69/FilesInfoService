@@ -16,6 +16,7 @@ import akka.routing.RoundRobinPool;
 import akka.stream.ActorMaterializer;
 import akka.stream.javadsl.Flow;
 import com.yusalar.actors.DatabaseAccessActor;
+import com.yusalar.attributes.AttributeValidatorsFactory;
 import com.yusalar.database.DatabaseProvider;
 import com.yusalar.database.MockedHBase;
 import com.yusalar.routes.UserRoutes;
@@ -37,6 +38,10 @@ public class Server {
 
     public static void main(String[] args) throws Exception {
         final ActorSystem system = ActorSystem.create("server");
+
+        AttributeValidatorsFactory.getInstance().registerAttribute("zone", Long::parseLong);
+        AttributeValidatorsFactory.getInstance().registerAttribute("format", Integer::parseInt);
+        AttributeValidatorsFactory.getInstance().registerAttribute("size", Long::parseLong);
 
         final Http http = Http.get(system);
         final ActorMaterializer materializer = ActorMaterializer.create(system);

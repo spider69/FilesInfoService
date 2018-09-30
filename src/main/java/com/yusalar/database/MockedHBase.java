@@ -1,5 +1,7 @@
 package com.yusalar.database;
 
+import com.yusalar.attributes.validators.AttributeValidator;
+
 import java.util.*;
 
 public class MockedHBase implements DatabaseProvider {
@@ -10,19 +12,20 @@ public class MockedHBase implements DatabaseProvider {
     public MockedHBase() {
     }
 
-    /*
+    /**
     Method for getting md5 by attributes performs searching in secondary table.
     For better performance in case of multiple getAttrByMd5 as well as getMd5ByAttrs it can be done in primary table to
     search in two separate HFiles simultaneously. (getAttrByMd5 -> secondary table, getMd5ByAttrs -> primary table)
      */
     @Override
-    public List<Long> getMd5ByAttrs(AttrsDescription attrsDescription) {
+    @SuppressWarnings("unchecked")
+    public List<Long> getMd5ByAttrs(Map<String, AttributeValidator> attrs) {
         List<Long> md5List = new ArrayList<>();
         for (Map.Entry<Long, Attr> entry : secondaryTable.entrySet()) {
             Attr attr = entry.getValue();
-            if (attr.getZone() == attrsDescription.getZone() &&
-                    attrsDescription.getFormats().contains(attr.getFormat()) &&
-                    (attr.getSize() >= attrsDescription.getSizeIntervalBegin() && attr.getSize() <= attrsDescription.getSizeIntervalEnd())
+            if (attrs.get("zone").validate(attr.getZone()) &&
+                    attrs.get("format").validate(attr.getFormat()) &&
+                    attrs.get("size").validate(attr.getSize())
             ) {
                 md5List.add(entry.getKey());
             }
@@ -30,7 +33,7 @@ public class MockedHBase implements DatabaseProvider {
         return md5List;
     }
 
-    /*
+    /**
     Method for getting attributes by md5 performs searching by key in the secondary table.
      */
     @Override
@@ -38,7 +41,7 @@ public class MockedHBase implements DatabaseProvider {
         return Optional.ofNullable(secondaryTable.getOrDefault(md5, null));
     }
 
-    /*
+    /**
     Method for performing insertion (id, md5, zone). Better performance can be achieved by dividing table columns into two
     column families for each insert stream. First column family - (md5, zone), second - (format, size). For each column
     family we have separate HFile and can write to these files at the same time.
@@ -66,7 +69,7 @@ public class MockedHBase implements DatabaseProvider {
         }
     }
 
-    /*
+    /**
     Method for performing insertion (id, format, size).
      */
     @Override

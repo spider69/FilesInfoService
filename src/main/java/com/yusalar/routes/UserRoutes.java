@@ -14,14 +14,12 @@ import akka.http.javadsl.unmarshalling.Unmarshaller;
 import akka.pattern.PatternsCS;
 import akka.util.ByteString;
 import com.yusalar.actors.DatabaseMessages;
+import com.yusalar.attributes.validators.AttributeValidator;
+import com.yusalar.attributes.AttributeValidatorsFactory;
 import com.yusalar.database.DatabaseProvider;
 
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.CompletionStage;
-import java.util.stream.Collectors;
 
 import static akka.http.javadsl.server.Directives.*;
 
@@ -42,14 +40,14 @@ public class UserRoutes {
                 path("insertSecond", this::insertSecondGroup),
                 path("get", () ->
                         route(
-                                getMd5ByAttrs(),
-                                getAttrsByMd5()
+                                getAttrsByMd5(),
+                                getMd5ByAttrs()
                         )
                 )
         );
     }
 
-    /*
+    /**
     Method for streaming first flow of records [{"id": 1, "md5": 3, "zone": 5}, {"id": 2, "md5": 456, "zone": 2}, ...]
     from POST body.
      */
@@ -84,7 +82,7 @@ public class UserRoutes {
         );
     }
 
-    /*
+    /**
     Method for streaming second flow of records [{"id": 1, "format": 45, "size": 5}, {"id": 2, "format": 200, "size": 500}, ...]
     from POST body.
     */
@@ -140,42 +138,29 @@ public class UserRoutes {
                 }));
     }
 
-    /*
+    /**
     Method returns list of Md5 for corresponding attributes.
      */
     private Route getMd5ByAttrs() {
         logger.info("Get md5 query gained");
-        return get(() -> parameter(StringUnmarshallers.LONG, "zone", zone ->
-                parameter(StringUnmarshallers.STRING, "format", format ->
-                        parameter(StringUnmarshallers.STRING, "size", size -> {
-                            // parsing params from "zone=1&format=254,255&size=1-1024"
-                            DatabaseProvider.AttrsDescription attrs = getAttrsDescriptionFromString(zone, format, size);
-                            CompletionStage<List<Long>> md5 = PatternsCS
-                                    .ask(databaseAccessActorsPool, new DatabaseMessages.GetMd5ByAttrs(attrs), timeout)
-                                    .thenApply(obj -> (List<Long>) obj);
-                            // TODO: return md5 as hex in list
-                            return onSuccess(() -> md5, listOfMd5 -> {
-                                if (listOfMd5.isEmpty()) {
-                                    logger.info("Get md5 query failed");
-                                    return complete(StatusCodes.NOT_FOUND, "Md5 for requested attributes doesn't exist");
-                                } else {
-                                    logger.info("Get md5 query successfully performed");
-                                    return complete(StatusCodes.OK, listOfMd5, Jackson.marshaller());
-                                }
-                            });
-                        })
-                )));
-    }
-
-    private static DatabaseProvider.AttrsDescription getAttrsDescriptionFromString(long zone, String formatsAsString, String sizesAsString) {
-        // TODO: add params checking
-        String[] formatsAsStringsArray = formatsAsString.split(",");
-        String[] sizesLimits = sizesAsString.split("-", 2);
-
-        List<Integer> formats = Arrays.stream(formatsAsStringsArray)
-                .map(Integer::parseInt)
-                .collect(Collectors.toList());
-
-        return new DatabaseProvider.AttrsDescription(zone, formats, Long.parseLong(sizesLimits[0]), Long.parseLong(sizesLimits[1]));
+        return get(() -> parameterMap(params -> {
+            Map<String, AttributeValidator> attrs = new HashMap<>();
+            params.forEach((name, attrAsString) ->
+                attrs.put(name, AttributeValidatorsFactory.getInstance().parseAttributeFromString(name, attrAsString))
+            );
+            CompletionStage<List<Long>> md5 = PatternsCS
+                    .ask(databaseAccessActorsPool, new DatabaseMessages.GetMd5ByAttrs(attrs), timeout)
+                    .thenApply(obj -> (List<Long>) obj);
+            // TODO: return md5 as hex in list
+            return onSuccess(() -> md5, listOfMd5 -> {
+                if (listOfMd5.isEmpty()) {
+                    logger.info("Get md5 query failed");
+                    return complete(StatusCodes.NOT_FOUND, "Md5 for requested attributes doesn't exist");
+                } else {
+                    logger.info("Get md5 query successfully performed");
+                    return complete(StatusCodes.OK, listOfMd5, Jackson.marshaller());
+                }
+            });
+        }));
     }
 }
